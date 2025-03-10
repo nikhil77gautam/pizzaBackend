@@ -1,5 +1,7 @@
 import Joi from 'joi';
-import Pizza from "../../Admin/Model/pizzaData.js";
+import Pizza from "../../Admin/Model/pizzadata.js";
+
+
 
 // Validation Schemas
 const createPizzaSchema = Joi.object({

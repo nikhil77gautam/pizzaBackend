@@ -1,8 +1,8 @@
 import Joi from "joi";
 import Order from "../../Admin/Model/order.js";
 import Cart from "../../Customer/Model/cartDataModel.js";
-import Pizza from "../../Admin/Model/pizzaData.js";
-import Meal from "../../Admin/Model/meals.js"; 
+import Pizza from "../../Admin/Model/pizzadata.js";
+import Meal from "../../Admin/Model/meals.js";
 import Customer from "../../Customer/Model/customerAuthModel.js";
 
 // Define Joi schema for order validation
@@ -13,9 +13,9 @@ const orderSchema = Joi.object({
     city: Joi.string().required(),
     postalCode: Joi.string().min(6).required(),
     country: Joi.string().required(),
-    state: Joi.string().required()
+    state: Joi.string().required(),
   }).required(),
-  deliveryInstructions: Joi.string().allow('', null),
+  deliveryInstructions: Joi.string().allow("", null),
 });
 
 // Place Order
@@ -26,7 +26,9 @@ const placeorder = async (req, res) => {
 
     // If validation fails, send an error response
     if (error) {
-      return res.status(400).json({ message: `Validation error: ${error.details[0].message}` });
+      return res
+        .status(400)
+        .json({ message: `Validation error: ${error.details[0].message}` });
     }
 
     const { customer, cartid, shippingAddress, deliveryInstructions } = value;
@@ -54,7 +56,9 @@ const placeorder = async (req, res) => {
     }
 
     // Fetch the cart data
-    const cartData = await Cart.findById(cartid).populate('pizzas.pizza').populate('meals.meal');
+    const cartData = await Cart.findById(cartid)
+      .populate("pizzas.pizza")
+      .populate("meals.meal");
 
     if (!cartData) {
       return res.status(404).json({ message: "Cart not found" });
@@ -64,13 +68,13 @@ const placeorder = async (req, res) => {
 
     // Prepare cart details
     const cartDetails = [
-      ...cartData.pizzas.map(item => {
+      ...cartData.pizzas.map((item) => {
         const pizza = item.pizza;
         const itemTotal = pizza.price * item.quantity;
         totalAmount += itemTotal;
 
         return {
-          type: 'pizza',
+          type: "pizza",
           item: pizza._id,
           quantity: item.quantity,
           title: pizza.title,
@@ -78,13 +82,13 @@ const placeorder = async (req, res) => {
           total: itemTotal,
         };
       }),
-      ...cartData.meals.map(item => {
+      ...cartData.meals.map((item) => {
         const meal = item.meal;
         const itemTotal = meal.price * item.quantity;
         totalAmount += itemTotal;
 
         return {
-          type: 'meal',
+          type: "meal",
           item: meal._id,
           quantity: item.quantity,
           title: meal.title,
@@ -113,7 +117,6 @@ const placeorder = async (req, res) => {
       message: "Order placed successfully and cart cleared",
       order: savedOrder,
     });
-
   } catch (error) {
     res.status(500).json({
       message: "Error in placing order",
@@ -121,8 +124,6 @@ const placeorder = async (req, res) => {
     });
   }
 };
-
-
 
 // Update Order Status
 const updateOrderStatus = async (req, res) => {
@@ -132,11 +133,9 @@ const updateOrderStatus = async (req, res) => {
 
     // console.log("Orderid",Orderid)
     // console.log("orderStatus",orderStatus)
-    const updateOrder = await Order.findByIdAndUpdate(
-      Orderid,
-      orderStatus,
-      { new: true }
-    );
+    const updateOrder = await Order.findByIdAndUpdate(Orderid, orderStatus, {
+      new: true,
+    });
 
     if (!updateOrder) {
       return res.status(404).json({
@@ -179,16 +178,14 @@ const getOrder = async (req, res) => {
   }
 };
 
-
 // Get All Orders (Admin)
 const getAllOrders = async (req, res) => {
   try {
     // Populate customer details along with orders
-    const orders = await Order.find()
-      .populate({
-        path: 'customer',
-        select: 'name phoneNumber', 
-      });
+    const orders = await Order.find().populate({
+      path: "customer",
+      select: "name phoneNumber",
+    });
 
     return res.status(200).json({
       orders,
@@ -201,7 +198,6 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-
 // Delete Order
 const deleteOrders = async (req, res) => {
   try {
@@ -209,7 +205,9 @@ const deleteOrders = async (req, res) => {
     await Order.findByIdAndDelete(orderId);
     return res.json({ success: true, message: "Order deleted" });
   } catch (error) {
-    res.status(500).json({ message: "Error deleting order", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting order", error: error.message });
   }
 };
 
