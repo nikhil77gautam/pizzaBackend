@@ -18,7 +18,9 @@ app.use("/uplods", express.static("uplods"));
 
 // DB Connection
 mongoose
-  .connect("mongodb://127.0.0.1:27017/pizzaFullStack")
+  .connect(
+    "mongodb+srv://nikhil77gautam:QH3FSsvbAbOdDvBL@cluster0.u4nfv2p.mongodb.net/pizzaPanael?retryWrites=true&w=majority"
+  )
   .then(() => {
     console.log("Database connection is successful");
   })
