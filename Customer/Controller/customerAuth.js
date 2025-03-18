@@ -59,7 +59,7 @@ const customerSignup = async (req, res) => {
 
     await newUser.save();
 
-    const verificationLink = `http://localhost:8000/customerverify-email?token=${verificationToken}`;
+    const verificationLink = `https://pizza-frontend-zeta.vercel.app/customerverify-email?token=${verificationToken}`;
     const emailContent = `Hi ${name},<br/><br/>
             Please click the following link to verify your email: 
             <a href="${verificationLink}">Verify Email</a><br/><br/>
