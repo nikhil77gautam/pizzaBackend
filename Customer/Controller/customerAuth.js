@@ -53,7 +53,7 @@ const customerSignup = async (req, res) => {
     await newUser.save();
     console.log("New User Created:", newUser); // Debugging
 
-    const verificationLink = `http://localhost:8000/customerverify-email?token=${verificationToken}`;
+    const verificationLink = `https://pizzabackend-0x3r.onrender.com/customerverify-email?token=${verificationToken}`;
     const emailContent = `Hi ${name},<br/><br/>
       Please click the following link to verify your email: 
       <a href="${verificationLink}">Verify Email</a><br/><br/>
