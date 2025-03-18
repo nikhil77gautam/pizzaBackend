@@ -2,9 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
-// import crypto from "crypto";
-import Customer from "../../Customer/Model/customerAuthModel.js"; // Correct model import
-
+import Customer from "../../Customer/Model/customerAuthModel.js";
 
 // Joi Schema Validation
 const signupSchema = Joi.object({
@@ -45,7 +43,9 @@ const customerSignup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString("hex"); // Increased size
+    const verificationToken = `${Math.random()
+      .toString(36)
+      .substring(2)}${Date.now()}`; // Removed crypto
 
     const newUser = new Customer({
       name,
@@ -108,7 +108,7 @@ const verifyEmail = async (req, res) => {
     }
 
     user.verified = true;
-    user.verificationToken = null; 
+    user.verificationToken = null;
     await user.save();
 
     res
