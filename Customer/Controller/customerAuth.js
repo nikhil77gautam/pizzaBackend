@@ -42,14 +42,16 @@ const customerSignup = async (req, res) => {
 
     console.log("Generated Token:", verificationToken); // Debugging
 
-    const newUser = await Customer.create({
+    const newUser = new Customer({
       name,
       email,
       password: hashedPassword,
       phoneNumber,
       verificationToken,
-      verified: false, // Ensure this field is saved
+      verified: false,
     });
+    await newUser.save();
+    console.log("New User Created:", newUser); // Debugging
 
     const verificationLink = `http://localhost:8000/customerverify-email?token=${verificationToken}`;
     const emailContent = `Hi ${name},<br/><br/>
@@ -65,6 +67,7 @@ const customerSignup = async (req, res) => {
     );
 
     if (!emailSent) {
+      console.log("Email sending failed for:", email);
       return res.json({
         success: true,
         message: "Account created, but email could not be sent",
@@ -93,8 +96,9 @@ const verifyEmail = async (req, res) => {
 
   try {
     const user = await Customer.findOne({ verificationToken: token });
-    console.log(user);
+
     if (!user) {
+      console.log("Invalid or expired token for verification.");
       return res
         .status(400)
         .json({ success: false, message: "Invalid or expired token" });
@@ -103,7 +107,7 @@ const verifyEmail = async (req, res) => {
     console.log("User found:", user._id); // Debugging
 
     user.verified = true;
-    user.verificationToken = null;
+    user.verificationToken = null; // Clear the token
     await user.save();
 
     res
@@ -162,9 +166,8 @@ const getUserInfo = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const User = await Customer.find();
-
-    res.json({ success: true, message: User });
+    const users = await Customer.find();
+    res.json({ success: true, message: users });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
