@@ -120,6 +120,14 @@ const customerLogin = async (req, res) => {
   }
 };
 
+const customerLogout = async (req, res) => {
+  try {
+    res.json({ success: true, message: "Logout successful" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getUserInfo = async (req, res) => {
   try {
     const customerId = req.params.id;
@@ -148,4 +156,11 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-export { customerSignup, verifyEmail, customerLogin, getUserInfo, getAllUsers };
+export {
+  customerSignup,
+  verifyEmail,
+  customerLogin,
+  getUserInfo,
+  customerLogout,
+  getAllUsers,
+};
