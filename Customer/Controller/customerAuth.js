@@ -4,6 +4,9 @@ import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
 import crypto from "crypto";
 import customerauth from "../../Customer/Model/customerAuthModel.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const signupSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -19,30 +22,36 @@ const signupSchema = Joi.object({
 });
 
 const customerSignup = async (req, res) => {
-  const { email, password, name, phoneNumber } = req.body;
-  console.log("user data", req.body);
-
-  const { error } = signupSchema.validate(req.body);
-  if (error) {
-    return res.json({ success: false, message: error.details[0].message });
-  }
-
   try {
-    const user = await customerauth.findOne({ email });
-    if (user) {
-      return res.json({ success: false, message: "Email already in use!" });
+    const { email, password, name, phoneNumber } = req.body;
+    console.log("User data:", req.body);
+
+    const { error } = signupSchema.validate(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .json({ success: false, message: error.details[0].message });
+    }
+
+    const existingUser = await customerauth.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already in use!" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(12).toString("hex");
+    const verificationToken = crypto.randomBytes(16).toString("hex");
 
-    await customerauth.create({
+    const newUser = new customerauth({
       name,
       email,
       password: hashedPassword,
       phoneNumber,
       verificationToken,
+      verified: false,
     });
+    await newUser.save();
 
     const verificationLink = `http://localhost:8000/customerverify-email?token=${verificationToken}`;
     const emailContent = `Hi ${name},<br/><br/>
@@ -56,100 +65,113 @@ const customerSignup = async (req, res) => {
       "",
       emailContent
     );
-
     if (!emailSent) {
-      return res.json({
-        success: true,
-        data: "Account created, but email could not be sent",
+      return res.status(500).json({
+        success: false,
+        message: "Account created, but email could not be sent.",
       });
     }
 
-    res.json({
+    res.status(201).json({
       success: true,
-      data: "Account created and verification email sent",
+      message: "Account created and verification email sent.",
     });
   } catch (err) {
-    res.json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 const verifyEmail = async (req, res) => {
-  const { token } = req.query;
-  if (!token) {
-    return res.json({ success: false, message: "No token provided" });
-  }
-
   try {
-    const user = await customerauth.findOne({ verificationToken: token });
-
-    if (!user) {
-      return res.json({ success: false, message: "Invalid or expired token" });
+    const { token } = req.query;
+    if (!token) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No token provided" });
     }
 
-    // Ensure verified field exists before updating
+    const user = await customerauth.findOne({ verificationToken: token });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired token" });
+    }
+
     user.verified = true;
     user.verificationToken = null;
-
     await user.save();
 
-    res.json({ success: true, message: "Email successfully verified!" });
+    res
+      .status(200)
+      .json({ success: true, message: "Email successfully verified!" });
   } catch (err) {
-    res.json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 const customerLogin = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
     const user = await customerauth.findOne({ email });
+
     if (!user) {
-      return res.json({ success: false, message: "Email not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email not found" });
     }
 
     if (!user.verified) {
-      return res.json({ success: false, message: "Email not verified" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email not verified" });
     }
 
-    const result = await bcrypt.compare(password, user.password);
-
-    if (result) {
-      const token = jwt.sign({ name: user.name, _id: user._id }, "abcd");
-      const _id = user._id;
-      res.json({ success: true, message: "Login successful", token, _id });
-    } else {
-      res.json({ success: false, message: "Incorrect password" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Incorrect password" });
     }
+
+    const token = jwt.sign(
+      { _id: user._id, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      _id: user._id,
+    });
   } catch (err) {
-    res.json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 const getUserInfo = async (req, res) => {
   try {
-    const customerId = req.params.id;
-    console.log("customerId", customerId);
-
-    const customer = await customerauth.findById(customerId);
-    console.log("customer", customer);
+    const { id } = req.params;
+    const customer = await customerauth.findById(id);
 
     if (!customer) {
-      return res.json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    res.json({ success: true, data: customer });
-  } catch (error) {
-    res.json({ success: false, message: error.message });
+    res.status(200).json({ success: true, data: customer });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 const getAllUsers = async (req, res) => {
   try {
-    const User = await customerauth.find();
-
-    res.json({ success: true, message: User });
-  } catch (error) {
-    res.json({ success: false, message: error.message });
+    const users = await customerauth.find();
+    res.status(200).json({ success: true, data: users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
