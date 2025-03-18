@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
 import crypto from "crypto";
-import Customer from "../../Customer/Model/customerAuthModel.js";
+import customerauth from "../../Customer/Model/customerAuthModel.js";
 
 const signupSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -20,44 +20,35 @@ const signupSchema = Joi.object({
 
 const customerSignup = async (req, res) => {
   const { email, password, name, phoneNumber } = req.body;
-  console.log("Received user data:", req.body);
+  console.log("user data", req.body);
 
   const { error } = signupSchema.validate(req.body);
   if (error) {
-    return res
-      .status(400)
-      .json({ success: false, message: error.details[0].message });
+    return res.json({ success: false, message: error.details[0].message });
   }
 
   try {
-    const userExists = await Customer.findOne({ email });
-    if (userExists) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already in use!" });
+    const user = await customerauth.findOne({ email });
+    if (user) {
+      return res.json({ success: false, message: "Email already in use!" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(12).toString("hex");
 
-    console.log("Generated Token:", verificationToken); // Debugging
-
-    const newUser = new Customer({
+    await customerauth.create({
       name,
       email,
       password: hashedPassword,
       phoneNumber,
       verificationToken,
-      verified: false,
     });
-    await newUser.save();
-    console.log("New User Created:", newUser); // Debugging
 
-    const verificationLink = `https://pizzabackend-0x3r.onrender.com/customerverify-email?token=${verificationToken}`;
+    const verificationLink = `http://localhost:8000/customerverify-email?token=${verificationToken}`;
     const emailContent = `Hi ${name},<br/><br/>
-      Please click the following link to verify your email: 
-      <a href="${verificationLink}">Verify Email</a><br/><br/>
-      Thank you!`;
+            Please click the following link to verify your email: 
+            <a href="${verificationLink}">Verify Email</a><br/><br/>
+            Thank you!`;
 
     const emailSent = await sendEmail(
       email,
@@ -67,55 +58,43 @@ const customerSignup = async (req, res) => {
     );
 
     if (!emailSent) {
-      console.log("Email sending failed for:", email);
       return res.json({
         success: true,
-        message: "Account created, but email could not be sent",
+        data: "Account created, but email could not be sent",
       });
     }
 
     res.json({
       success: true,
-      message: "Account created and verification email sent",
+      data: "Account created and verification email sent",
     });
   } catch (err) {
-    console.error("Signup Error:", err);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.json({ success: false, message: err.message });
   }
 };
 
 const verifyEmail = async (req, res) => {
   const { token } = req.query;
-  console.log("Received verification token:", token); // Debugging
-
   if (!token) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Token is required" });
+    return res.json({ success: false, message: "No token provided" });
   }
 
   try {
-    const user = await Customer.findOne({ verificationToken: token });
+    const user = await customerauth.findOne({ verificationToken: token });
 
     if (!user) {
-      console.log("Invalid or expired token for verification.");
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid or expired token" });
+      return res.json({ success: false, message: "Invalid or expired token" });
     }
 
-    console.log("User found:", user._id); // Debugging
-
+    // Ensure verified field exists before updating
     user.verified = true;
-    user.verificationToken = null; // Clear the token
+    user.verificationToken = null;
+
     await user.save();
 
-    res
-      .status(200)
-      .json({ success: true, message: "Email successfully verified!" });
+    res.json({ success: true, message: "Email successfully verified!" });
   } catch (err) {
-    console.error("Verification Error:", err);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.json({ success: false, message: err.message });
   }
 };
 
@@ -123,7 +102,7 @@ const customerLogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await Customer.findOne({ email });
+    const user = await customerauth.findOne({ email });
     if (!user) {
       return res.json({ success: false, message: "Email not found" });
     }
@@ -151,7 +130,7 @@ const getUserInfo = async (req, res) => {
     const customerId = req.params.id;
     console.log("customerId", customerId);
 
-    const customer = await Customer.findById(customerId);
+    const customer = await customerauth.findById(customerId);
     console.log("customer", customer);
 
     if (!customer) {
@@ -166,8 +145,9 @@ const getUserInfo = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await Customer.find();
-    res.json({ success: true, message: users });
+    const User = await customerauth.find();
+
+    res.json({ success: true, message: User });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
