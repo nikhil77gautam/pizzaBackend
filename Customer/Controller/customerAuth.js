@@ -4,9 +4,7 @@ import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
 import crypto from "crypto";
 import Customer from "../../Customer/Model/customerAuthModel.js"; // Correct model import
-import dotenv from "dotenv";
 
-dotenv.config();
 
 // Joi Schema Validation
 const signupSchema = Joi.object({
