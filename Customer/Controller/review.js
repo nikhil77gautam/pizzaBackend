@@ -1,29 +1,29 @@
-import ReviewData from '../Model/reviewModel.js';
-import Joi from 'joi';
+import ReviewData from "../Model/reviewModel.js";
+import Joi from "joi";
 
 // Define the Joi validation schema for creating a review
 const createValidation = Joi.object({
   orderId: Joi.string().required().messages({
-    'string.base': 'Pizza ID must be a string',
-    'string.empty': 'Pizza ID cannot be empty',
-    'any.required': 'Pizza ID is required',
+    "string.base": "Pizza ID must be a string",
+    "string.empty": "Pizza ID cannot be empty",
+    "any.required": "Pizza ID is required",
   }),
   customerId: Joi.string().required().messages({
-    'string.base': 'Customer ID must be a string',
-    'string.empty': 'Customer ID cannot be empty',
-    'any.required': 'Customer ID is required',
+    "string.base": "Customer ID must be a string",
+    "string.empty": "Customer ID cannot be empty",
+    "any.required": "Customer ID is required",
   }),
   rating: Joi.number().integer().min(1).max(5).required().messages({
-    'number.base': 'Rating must be a number',
-    'number.integer': 'Rating must be an integer',
-    'number.min': 'Rating must be at least 1',
-    'number.max': 'Rating must be at most 5',
-    'any.required': 'Rating is required',
+    "number.base": "Rating must be a number",
+    "number.integer": "Rating must be an integer",
+    "number.min": "Rating must be at least 1",
+    "number.max": "Rating must be at most 5",
+    "any.required": "Rating is required",
   }),
   comment: Joi.string().min(1).required().messages({
-    'string.base': 'Comment must be a string',
-    'string.empty': 'Comment cannot be empty',
-    'any.required': 'Comment is required',
+    "string.base": "Comment must be a string",
+    "string.empty": "Comment cannot be empty",
+    "any.required": "Comment is required",
   }),
 });
 
@@ -32,11 +32,13 @@ export const createReview = async (req, res) => {
   try {
     const { error } = createValidation.validate(req.body);
     if (error) {
-      return res.status(400).json({ message: `Validation error: ${error.details[0].message}` });
+      return res
+        .status(400)
+        .json({ message: `Validation error: ${error.details[0].message}` });
     }
 
     const { orderId, customerId, rating, comment } = req.body;
-    
+
     const data = await new ReviewData({
       orderId,
       customerId,
@@ -47,20 +49,32 @@ export const createReview = async (req, res) => {
     await data.save();
     res.status(200).json({ success: true, message: "Review added" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error adding review", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error adding review",
+        error: error.message,
+      });
   }
 };
 
 export const getAllReviews = async (req, res) => {
-    try {
-        const data = await ReviewData.find() 
-            .populate({ path: 'orderId', select: '_id' })  
-            .populate({ path: 'customerId', select: 'name email' });  
+  try {
+    const data = await ReviewData.find()
+      .populate({ path: "orderId", select: "_id" })
+      .populate({ path: "customerId", select: "name email" });
 
-        res.status(200).json({ success: true, reviews: data });
-    } catch (error) {
-        res.status(400).json({ success: false, message: "Error fetching data", error: error.message });
-    }
+    res.status(200).json({ success: true, reviews: data });
+  } catch (error) {
+    res
+      .status(400)
+      .json({
+        success: false,
+        message: "Error fetching data",
+        error: error.message,
+      });
+  }
 };
 
 // // Get one review by ID
