@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
 import crypto from "crypto";
-import customerauth from "../../Customer/Model/customerAuthModel.js";
+import Customer from "../../Customer/Model/customerAuthModel.js";
 
 const signupSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -28,7 +28,7 @@ const customerSignup = async (req, res) => {
   }
 
   try {
-    const user = await customerauth.findOne({ email });
+    const user = await Customer.findOne({ email });
     if (user) {
       return res.json({ success: false, message: "Email already in use!" });
     }
@@ -77,19 +77,24 @@ const verifyEmail = async (req, res) => {
   const { token } = req.query;
 
   try {
-    const user = await customerauth.findOne({ verificationToken: token });
+    const user = await Customer.findOne({ verificationToken: token });
 
     if (!user) {
-      return res.json({ success: false, message: "Invalid or expired token" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired token" });
     }
 
     user.verified = true;
     user.verificationToken = null;
     await user.save();
 
-    res.json({ success: true, message: "Email successfully verified!" });
+    res
+      .status(200)
+      .json({ success: true, message: "Email successfully verified!" });
   } catch (err) {
-    res.json({ success: false, message: err.message });
+    console.error("Verification Error:", err);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -97,7 +102,7 @@ const customerLogin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await customerauth.findOne({ email });
+    const user = await Customer.findOne({ email });
     if (!user) {
       return res.json({ success: false, message: "Email not found" });
     }
@@ -125,7 +130,7 @@ const getUserInfo = async (req, res) => {
     const customerId = req.params.id;
     console.log("customerId", customerId);
 
-    const customer = await customerauth.findById(customerId);
+    const customer = await Customer.findById(customerId);
     console.log("customer", customer);
 
     if (!customer) {
@@ -140,7 +145,7 @@ const getUserInfo = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const User = await customerauth.find();
+    const User = await Customer.find();
 
     res.json({ success: true, message: User });
   } catch (error) {
