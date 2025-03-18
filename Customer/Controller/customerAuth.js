@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
-import crypto from "crypto";
+// import crypto from "crypto";
 import Customer from "../../Customer/Model/customerAuthModel.js"; // Correct model import
 
 
