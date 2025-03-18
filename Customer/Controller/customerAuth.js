@@ -3,27 +3,33 @@ import jwt from "jsonwebtoken";
 import Joi from "joi";
 import sendEmail from "../../nodemailer.js";
 import crypto from "crypto";
-import customerauth from "../../Customer/Model/customerAuthModel.js";
+import Customer from "../../Customer/Model/customerAuthModel.js"; // Correct model import
 import dotenv from "dotenv";
 
 dotenv.config();
 
+// Joi Schema Validation
 const signupSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   name: Joi.string().min(3).required(),
   phoneNumber: Joi.string().min(10).required(),
-  address: Joi.object({
-    city: Joi.string().optional(),
-    state: Joi.string().optional(),
-    country: Joi.string().optional(),
-    postalCode: Joi.string().min(6).optional(),
-  }).optional(),
+  address: Joi.array()
+    .items(
+      Joi.object({
+        city: Joi.string().optional(),
+        state: Joi.string().optional(),
+        country: Joi.string().optional(),
+        postalCode: Joi.string().min(6).optional(),
+      })
+    )
+    .optional(),
 });
 
+// Customer Signup
 const customerSignup = async (req, res) => {
   try {
-    const { email, password, name, phoneNumber } = req.body;
+    const { email, password, name, phoneNumber, address } = req.body;
     console.log("User data:", req.body);
 
     const { error } = signupSchema.validate(req.body);
@@ -33,7 +39,7 @@ const customerSignup = async (req, res) => {
         .json({ success: false, message: error.details[0].message });
     }
 
-    const existingUser = await customerauth.findOne({ email });
+    const existingUser = await Customer.findOne({ email });
     if (existingUser) {
       return res
         .status(400)
@@ -41,16 +47,18 @@ const customerSignup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(16).toString("hex");
+    const verificationToken = crypto.randomBytes(32).toString("hex"); // Increased size
 
-    const newUser = new customerauth({
+    const newUser = new Customer({
       name,
       email,
       password: hashedPassword,
       phoneNumber,
+      address: address || [],
       verificationToken,
       verified: false,
     });
+
     await newUser.save();
 
     const verificationLink = `http://localhost:8000/customerverify-email?token=${verificationToken}`;
@@ -65,6 +73,7 @@ const customerSignup = async (req, res) => {
       "",
       emailContent
     );
+
     if (!emailSent) {
       return res.status(500).json({
         success: false,
@@ -81,16 +90,19 @@ const customerSignup = async (req, res) => {
   }
 };
 
+// Verify Email
 const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
+
     if (!token) {
       return res
         .status(400)
         .json({ success: false, message: "No token provided" });
     }
 
-    const user = await customerauth.findOne({ verificationToken: token });
+    const user = await Customer.findOne({ verificationToken: token });
+
     if (!user) {
       return res
         .status(400)
@@ -98,7 +110,7 @@ const verifyEmail = async (req, res) => {
     }
 
     user.verified = true;
-    user.verificationToken = null;
+    user.verificationToken = null; 
     await user.save();
 
     res
@@ -109,10 +121,11 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+// Customer Login
 const customerLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await customerauth.findOne({ email });
+    const user = await Customer.findOne({ email });
 
     if (!user) {
       return res
@@ -138,6 +151,7 @@ const customerLogin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -149,10 +163,11 @@ const customerLogin = async (req, res) => {
   }
 };
 
+// Get Single Customer
 const getUserInfo = async (req, res) => {
   try {
     const { id } = req.params;
-    const customer = await customerauth.findById(id);
+    const customer = await Customer.findById(id);
 
     if (!customer) {
       return res
@@ -166,9 +181,10 @@ const getUserInfo = async (req, res) => {
   }
 };
 
+// Get All Customers
 const getAllUsers = async (req, res) => {
   try {
-    const users = await customerauth.find();
+    const users = await Customer.find();
     res.status(200).json({ success: true, data: users });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -20,15 +20,7 @@ const customerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // dateOfBirth: {
-    //   type: Date,
-    //   required: true
-    // },
-    // gender: {
-    //   type: String,
-    //   enum: ['Male', 'Female', 'Non-Binary', 'Other'],
-    //   required: true
-    // },
+
     address: [
       {
         city: { type: String },
@@ -40,7 +32,7 @@ const customerSchema = new mongoose.Schema(
     verified: { type: Boolean, default: false },
     verificationToken: { type: String },
   },
-  { timestamps: true } 
+  { timestamps: true }
 );
 
 const Customer = mongoose.model("Customer", customerSchema);
